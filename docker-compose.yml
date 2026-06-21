@@ -1,0 +1,34 @@
+services:
+  registry:
+    build: .
+    ports:
+      - "${PORT:-12139}:12139"
+    volumes:
+      # Drop .xte files into ./plugins/ and they appear in the catalog automatically.
+      - ./plugins:/app/plugins
+      # Optional: mount ./icon/ to replace the default icons without rebuilding the image.
+      # - ./icon:/app/icon
+    environment:
+      # Human-readable name shown in the catalog JSON
+      SOURCE_NAME: "${SOURCE_NAME:-xyNasTools Plugin Registry}"
+      # Public URL where this registry is reachable (used in catalog metadata)
+      SOURCE_URL: "${SOURCE_URL:-http://localhost:12139}"
+      # --- SECURITY ---
+      # Set AUTH_TOKEN to a password/key string.
+      # When set, catalog.json and plugin downloads require the key in one of two ways:
+      #   Query param:  GET /plugins/foo.xte?key=<AUTH_TOKEN>
+      #   Header:       Authorization: <AUTH_TOKEN>  (Bearer prefix optional)
+      # Leave empty to allow unauthenticated downloads (e.g. internal network only).
+      AUTH_TOKEN: "${AUTH_TOKEN:-}"
+      # CORS: set to your Core app's origin, or leave empty to disable CORS headers.
+      # Example: "https://nas.example.com"
+      ALLOWED_ORIGIN: "${ALLOWED_ORIGIN:-}"
+      # How long (seconds) the in-memory catalog cache is valid before a rebuild.
+      CATALOG_TTL: "${CATALOG_TTL:-60}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12139/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
